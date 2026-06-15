@@ -11,7 +11,7 @@ def init_database():
     client = ArangoClient(hosts=ARANGO_HOST)
     sys_db = client.db("_system", username=ARANGO_USER, password=ARANGO_PASSWORD)
 
-    # 创建数据库（若不存在）
+    # 创建数据库
     if not sys_db.has_database(DB_NAME):
         sys_db.create_database(DB_NAME)
         print(f" 数据库 {DB_NAME} 创建成功")
@@ -36,7 +36,7 @@ def init_database():
     else:
         print("  边集合 relations 已存在")
 
-    # 3. 创建知识图谱（适配 python-arango 8.x 字段规范）
+    # 3. 创建知识图谱
     graph_name = "qa_knowledge_graph"
     if not db.has_graph(graph_name):
         graph = db.create_graph(
@@ -51,7 +51,7 @@ def init_database():
     else:
         print(f"  知识图谱 {graph_name} 已存在")
 
-    # 4. 创建索引（使用 add_index 替代旧版 ensure_index）
+    # 4. 创建索引
     # 全文索引
     db["questions"].add_index({"type": "fulltext", "fields": ["question"], "minLength": 2})
     db["documents"].add_index({"type": "fulltext", "fields": ["title"], "minLength": 2})
@@ -59,7 +59,7 @@ def init_database():
     db["entities"].add_index({"type": "fulltext", "fields": ["name"], "minLength": 2})
     print(" 全文索引创建完成")
 
-    # 持久化索引（加速过滤与聚合）
+    # 持久化索引
     db["questions"].add_index({"type": "persistent", "fields": ["type"]})
     db["questions"].add_index({"type": "persistent", "fields": ["level"]})
     db["entities"].add_index({"type": "persistent", "fields": ["type"]})
