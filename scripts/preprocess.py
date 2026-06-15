@@ -30,7 +30,7 @@ def process_dataset(input_file: str, is_train: bool):
         supporting_facts = item["supporting_facts"]
         context = item["context"]
 
-        # 1. 处理问题数据
+        # 处理问题数据
         doc_titles = context["title"]
         doc_ids = [get_md5_key(title) for title in doc_titles]
         question_doc = {
@@ -47,7 +47,7 @@ def process_dataset(input_file: str, is_train: bool):
         else:
             test_questions_out.append(question_doc)
 
-        # 2. 处理上下文文档（去重）
+        # 处理上下文文档（去重）
         sentences_list = context["sentences"]
         for idx, title in enumerate(doc_titles):
             doc_key = doc_ids[idx]
@@ -63,7 +63,7 @@ def process_dataset(input_file: str, is_train: bool):
                 if qid not in documents_map[doc_key]["related_question_ids"]:
                     documents_map[doc_key]["related_question_ids"].append(qid)
 
-            # 3. 构建实体节点
+            # 构建实体节点
             if doc_key not in entities_map:
                 entities_map[doc_key] = {
                     "_key": doc_key,
@@ -72,12 +72,11 @@ def process_dataset(input_file: str, is_train: bool):
                     "description": sentences[0] if sentences else ""
                 }
 
-        # 4. 构建关系边
+        # 构建关系边
         if is_train:
             sup_titles = supporting_facts["title"]
             unique_sup_titles = list(dict.fromkeys(sup_titles))  # 去重保序
             
-            # bridge/comparison 问题连接两个支撑实体
             if len(unique_sup_titles) >= 2:
                 from_title = unique_sup_titles[0]
                 to_title = unique_sup_titles[1]
