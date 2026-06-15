@@ -176,7 +176,6 @@
             gap: 20px;
         }
 
-        /* 修复核心：图谱容器强制固定高度，确保ECharts能正常渲染 */
         .graph-box {
             width: 100%;
             height: 520px !important;
@@ -434,7 +433,6 @@
                 <!-- 右侧图谱区 -->
                 <div class="card">
                     <div class="card-title">知识图谱推理路径</div>
-                    <!-- 修复：确保容器有明确ID和固定高度 -->
                     <div id="graph-container" class="graph-box"></div>
                     <div class="path-panel" id="path-detail">
                         <div class="empty">查询后将展示完整推理路径详情</div>
@@ -503,7 +501,7 @@
     </div>
 
     <script>
-        // 后端API地址，本地部署无需修改
+        // 后端API地址
         const API_BASE = "http://" + window.location.hostname + ":8000/api";
         let graphChart = null;
 
@@ -518,7 +516,6 @@
                 if (item.dataset.page === "cluster") {
                     loadClusterData();
                 }
-                // 切换到多跳页时，强制重绘画布，解决切换后空白问题
                 if (item.dataset.page === "hop" && graphChart) {
                     setTimeout(() => {
                         graphChart.resize();
@@ -527,14 +524,13 @@
             });
         });
 
-        // ========== 安全初始化图谱：确保DOM存在再初始化 ==========
+        // ========== 安全初始化图谱 ==========
         function initGraph() {
             const dom = document.getElementById("graph-container");
             if (!dom) {
                 console.error("图谱容器DOM不存在");
                 return;
             }
-            // 销毁旧实例，防止重复初始化
             if (graphChart) {
                 graphChart.dispose();
                 graphChart = null;
@@ -565,7 +561,7 @@
                     }
 
                     const data = res.data;
-                    // 修复核心：渲染前检查实例，不存在则重新初始化
+
                     if (!graphChart) {
                         initGraph();
                     }
@@ -852,10 +848,9 @@
             }
         });
 
-        // 页面完全加载后再初始化，确保DOM就绪
         window.onload = () => {
             initGraph();
-            // 默认示例查询
+    
             document.getElementById("entity-input").value = "Oberoi family";
             doMultiHop();
         };
