@@ -41,7 +41,7 @@ def get_cache(key: str):
 def set_cache(key: str, value):
     r.setex(key, CACHE_EXPIRE, json.dumps(value, ensure_ascii=False))
 
-# ========== 接口1：多跳查询（修复边投影语法） ==========
+# ========== 接口1：多跳查询 ==========
 @app.get("/api/multi-hop")
 def multi_hop_query(
     entity_name: str = Query(..., description="起始实体名称"),
@@ -117,7 +117,7 @@ def multi_hop_query(
 
     set_cache(cache_key, result)
     return {"code": 0, "data": result, "from_cache": False}
-# ========== 接口2：全文检索（修复AQL语法） ==========
+# ========== 接口2：全文检索 ==========
 @app.get("/api/search")
 def fulltext_search(
     keyword: str = Query(..., description="搜索关键词"),
