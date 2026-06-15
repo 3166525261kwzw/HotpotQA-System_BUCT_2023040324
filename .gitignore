@@ -17,10 +17,3 @@ nohup.out
 .DS_Store
 .vscode/
 
-# 评估临时报告
-evaluation_full_report.txt
-evaluation_result.txt
-
-# 超大数据集，完全不上传
-data/processed/*.jsonl
-data/raw/
