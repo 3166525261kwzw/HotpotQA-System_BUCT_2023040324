@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HotpotQA 多跳知识查询与可视化系统</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: #f0f2f5;
+            color: #1f2937;
+            line-height: 1.6;
+        }
+
+        /* 顶部导航栏 */
+        .header {
+            background: linear-gradient(90deg, #1e3a8a 0%, #2563eb 100%);
+            color: white;
+            padding: 0 40px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-title {
+            font-size: 20px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .header-sub {
+            font-size: 13px;
+            opacity: 0.85;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 8px;
+            height: 100%;
+        }
+
+        .nav-tab {
+            padding: 0 24px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 500;
+            opacity: 0.8;
+            transition: all 0.2s ease;
+            border-bottom: 3px solid transparent;
+        }
+
+        .nav-tab:hover {
+            opacity: 1;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-tab.active {
+            opacity: 1;
+            border-bottom-color: #fbbf24;
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        /* 主容器 */
+        .main-container {
+            padding: 24px 32px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .page {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 通用卡片 */
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+            padding: 24px;
+            margin-bottom: 20px;
+            transition: box-shadow 0.2s ease;
+        }
+
+        .card:hover {
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-title::before {
+            content: "";
+            width: 4px;
+            height: 16px;
+            background: #2563eb;
+            border-radius: 2px;
+        }
+
+        /* 表单元素 */
+        .form-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        input, select, button {
+            padding: 10px 14px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        input:focus, select:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        button {
+            background: linear-gradient(90deg, #2563eb 0%, #1d4ed8 100%);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            padding: 10px 20px;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        /* 多跳查询页布局 */
+        .hop-layout {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 20px;
+        }
+
+        /* 修复核心：图谱容器强制固定高度，确保ECharts能正常渲染 */
+        .graph-box {
+            width: 100%;
+            height: 520px !important;
+            min-height: 520px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            background: #fafafa;
+            display: block;
+        }
+
+        .path-panel {
+            margin-top: 16px;
+            max-height: 220px;
+            overflow-y: auto;
+            padding-right: 8px;
+        }
+
+        .path-item {
+            padding: 12px;
+            background: #f8fafc;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 3px solid #2563eb;
+            font-size: 13px;
+            transition: background 0.2s ease;
+        }
+
+        .path-item:hover {
+            background: #eff6ff;
+        }
+
+        .path-title {
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+
+        .path-desc {
+            color: #64748b;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        /* 统计卡片 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-card::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(180deg, #2563eb, #60a5fa);
+        }
+
+        .stat-num {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        /* 图表布局 */
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .chart-box {
+            height: 340px;
+            width: 100%;
+        }
+
+        /* 搜索结果 */
+        .result-section {
+            margin-bottom: 24px;
+        }
+
+        .result-section-title {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #334155;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .result-item {
+            padding: 14px;
+            border-bottom: 1px solid #f1f5f9;
+            transition: background 0.2s ease;
+            border-radius: 6px;
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+        }
+
+        .result-item:hover {
+            background: #f8fafc;
+        }
+
+        .result-title {
+            font-weight: 500;
+            color: #1e293b;
+            margin-bottom: 6px;
+            font-size: 14px;
+        }
+
+        .result-meta {
+            color: #64748b;
+            font-size: 12px;
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .meta-tag {
+            padding: 2px 8px;
+            background: #eff6ff;
+            color: #2563eb;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+
+        /* 加载提示 */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 40px;
+            color: #94a3b8;
+            font-size: 14px;
+        }
+
+        /* 滚动条美化 */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* 响应式适配 */
+        @media (max-width: 1200px) {
+            .hop-layout {
+                grid-template-columns: 1fr;
+            }
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .chart-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航 -->
+    <div class="header">
+        <div>
+            <div class="header-title">HotpotQA 多跳知识查询与可视化系统</div>
+        </div>
+        <div class="nav-tabs">
+            <div class="nav-tab active" data-page="hop">多跳查询</div>
+            <div class="nav-tab" data-page="search">全文检索</div>
+            <div class="nav-tab" data-page="cluster">聚类统计</div>
+        </div>
+        <div class="header-sub">ArangoDB + Redis 多模型架构</div>
+    </div>
+
+    <div class="main-container">
+        <!-- 多跳查询页 -->
+        <div id="page-hop" class="page active">
+            <div class="hop-layout">
+                <!-- 左侧控制面板 -->
+                <div>
+                    <div class="card">
+                        <div class="card-title">查询配置</div>
+                        <div class="form-row" style="flex-direction: column;">
+                            <input type="text" id="entity-input" placeholder="输入起始实体名称" style="width: 100%;">
+                        </div>
+                        <div class="form-row">
+                            <select id="depth-select" style="flex: 1;">
+                                <option value="2">2 跳查询</option>
+                                <option value="3">3 跳查询</option>
+                                <option value="4">4 跳查询</option>
+                            </select>
+                            <button onclick="doMultiHop()">开始查询</button>
+                        </div>
+                        <div id="entity-info" style="font-size: 13px; color: #64748b; margin-top: 8px;">
+                            请输入实体名称发起查询
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title">查询统计</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; text-align: center;">
+                            <div>
+                                <div style="font-size: 22px; font-weight: 700; color: #2563eb;" id="stat-nodes">0</div>
+                                <div style="font-size: 12px; color: #64748b;">关联实体</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 22px; font-weight: 700; color: #10b981;" id="stat-paths">0</div>
+                                <div style="font-size: 12px; color: #64748b;">推理路径</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 右侧图谱区 -->
+                <div class="card">
+                    <div class="card-title">知识图谱推理路径</div>
+                    <!-- 修复：确保容器有明确ID和固定高度 -->
+                    <div id="graph-container" class="graph-box"></div>
+                    <div class="path-panel" id="path-detail">
+                        <div class="empty">查询后将展示完整推理路径详情</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 全文检索页 -->
+        <div id="page-search" class="page">
+            <div class="card">
+                <div class="card-title">全文检索</div>
+                <div class="form-row">
+                    <input type="text" id="search-input" placeholder="输入关键词进行检索" style="flex: 1;">
+                    <select id="search-type">
+                        <option value="all">全部维度</option>
+                        <option value="question">问题检索</option>
+                        <option value="document">文档检索</option>
+                        <option value="entity">实体检索</option>
+                    </select>
+                    <button onclick="doSearch()">搜索</button>
+                </div>
+            </div>
+
+            <div class="card" id="search-results">
+                <div class="empty">请输入关键词开始检索</div>
+            </div>
+        </div>
+
+        <!-- 聚类统计页 -->
+        <div id="page-cluster" class="page">
+            <div class="stats-grid" id="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-num" id="num-questions">--</div>
+                    <div class="stat-label">问题总数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-num" id="num-docs">--</div>
+                    <div class="stat-label">文档总数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-num" id="num-entities">--</div>
+                    <div class="stat-label">实体总数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-num" id="num-relations">--</div>
+                    <div class="stat-label">关系总数</div>
+                </div>
+            </div>
+
+            <div class="chart-grid">
+                <div class="card">
+                    <div class="card-title">问题类型分布</div>
+                    <div id="chart-type" class="chart-box"></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">难度等级分布</div>
+                    <div id="chart-level" class="chart-box"></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">关系类型分布</div>
+                    <div id="chart-rel" class="chart-box"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 后端API地址，本地部署无需修改
+        const API_BASE = "http://" + window.location.hostname + ":8000/api";
+        let graphChart = null;
+
+        // ========== 导航切换 ==========
+        document.querySelectorAll(".nav-tab").forEach(item => {
+            item.addEventListener("click", () => {
+                document.querySelectorAll(".nav-tab").forEach(i => i.classList.remove("active"));
+                document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+                item.classList.add("active");
+                document.getElementById("page-" + item.dataset.page).classList.add("active");
+                
+                if (item.dataset.page === "cluster") {
+                    loadClusterData();
+                }
+                // 切换到多跳页时，强制重绘画布，解决切换后空白问题
+                if (item.dataset.page === "hop" && graphChart) {
+                    setTimeout(() => {
+                        graphChart.resize();
+                    }, 100);
+                }
+            });
+        });
+
+        // ========== 安全初始化图谱：确保DOM存在再初始化 ==========
+        function initGraph() {
+            const dom = document.getElementById("graph-container");
+            if (!dom) {
+                console.error("图谱容器DOM不存在");
+                return;
+            }
+            // 销毁旧实例，防止重复初始化
+            if (graphChart) {
+                graphChart.dispose();
+                graphChart = null;
+            }
+            graphChart = echarts.init(dom);
+            console.log("图谱实例初始化成功");
+        }
+
+        // ========== 多跳查询 ==========
+        function doMultiHop() {
+            const name = document.getElementById("entity-input").value.trim();
+            const depth = document.getElementById("depth-select").value;
+            if (!name) {
+                alert("请输入实体名称");
+                return;
+            }
+
+            document.getElementById("path-detail").innerHTML = '<div class="loading">正在查询推理路径...</div>';
+            
+            fetch(`${API_BASE}/multi-hop?entity_name=${encodeURIComponent(name)}&max_depth=${depth}`)
+                .then(r => r.json())
+                .then(res => {
+                    if (res.code !== 0) {
+                        document.getElementById("path-detail").innerHTML = `<div class="empty">查询失败：${res.msg}</div>`;
+                        document.getElementById("stat-nodes").textContent = "0";
+                        document.getElementById("stat-paths").textContent = "0";
+                        return;
+                    }
+
+                    const data = res.data;
+                    // 修复核心：渲染前检查实例，不存在则重新初始化
+                    if (!graphChart) {
+                        initGraph();
+                    }
+                    renderGraph(data);
+                    renderPathList(data.paths);
+                    
+                    document.getElementById("stat-nodes").textContent = data.nodes.length;
+                    document.getElementById("stat-paths").textContent = data.total_paths;
+                    document.getElementById("entity-info").innerHTML = 
+                        `起始实体：<strong>${data.start_entity.name}</strong><br>${data.start_entity.description || ""}`;
+                })
+                .catch(err => {
+                    console.error("查询请求异常:", err);
+                    document.getElementById("path-detail").innerHTML = `<div class="empty">请求失败，请检查后端服务</div>`;
+                });
+        }
+
+        function renderGraph(data) {
+            // 双重校验实例
+            if (!graphChart) {
+                initGraph();
+                if (!graphChart) return;
+            }
+
+            // 空数据兜底
+            if (!data.nodes || data.nodes.length === 0) {
+                graphChart.clear();
+                return;
+            }
+
+            const nodes = data.nodes.map(n => ({
+                name: n.name,
+                symbolSize: 22,
+                itemStyle: { 
+                    color: '#2563eb',
+                    shadowBlur: 10,
+                    shadowColor: 'rgba(37, 99, 235, 0.3)'
+                }
+            }));
+
+            const links = data.edges.map(e => ({
+                source: e.source,
+                target: e.target,
+                lineStyle: {
+                    color: '#94a3b8',
+                    width: 1.5,
+                    curveness: 0.1
+                },
+                label: {
+                    show: true,
+                    formatter: e.relation,
+                    fontSize: 11,
+                    color: '#64748b',
+                    backgroundColor: '#fff',
+                    padding: [2, 4]
+                },
+                question: e.question,
+                answer: e.answer
+            }));
+
+            const option = {
+                tooltip: {
+                    formatter: params => {
+                        if (params.dataType === 'edge') {
+                            return `<strong>关联问题：</strong><br>${params.data.question}<br><strong>答案：</strong>${params.data.answer}`;
+                        }
+                        return params.name;
+                    }
+                },
+                series: [{
+                    type: 'graph',
+                    layout: 'force',
+                    roam: true,
+                    draggable: true,
+                    focusNodeAdjacency: true,
+                    label: {
+                        show: true,
+                        position: 'right',
+                        fontSize: 12,
+                        color: '#334155'
+                    },
+                    force: {
+                        repulsion: 450,
+                        edgeLength: 130,
+                        gravity: 0.1
+                    },
+                    data: nodes,
+                    links: links
+                }]
+            };
+
+            // notMerge=true 强制全量替换配置，避免旧数据残留
+            graphChart.setOption(option, true);
+        }
+
+        function renderPathList(paths) {
+            const box = document.getElementById("path-detail");
+            if (!paths || paths.length === 0) {
+                box.innerHTML = '<div class="empty">未找到关联推理路径</div>';
+                return;
+            }
+
+            let html = `<div style="margin-bottom: 10px; font-weight: 500; color: #334155;">共找到 ${paths.length} 条推理路径</div>`;
+            paths.slice(0, 30).forEach((p, i) => {
+                const pathStr = p.vertices.join(" → ");
+                const lastEdge = p.edges[p.edges.length - 1] || {};
+                html += `
+                    <div class="path-item">
+                        <div class="path-title">路径 ${i+1}</div>
+                        <div style="color: #2563eb; margin-bottom: 4px;">${pathStr}</div>
+                        <div class="path-desc">关联问题：${lastEdge.question || "-"}<br>对应答案：${lastEdge.answer || "-"}</div>
+                    </div>
+                `;
+            });
+            box.innerHTML = html;
+        }
+
+        // ========== 全文检索 ==========
+        function doSearch() {
+            const kw = document.getElementById("search-input").value.trim();
+            const type = document.getElementById("search-type").value;
+            if (!kw) {
+                alert("请输入搜索关键词");
+                return;
+            }
+
+            const resultBox = document.getElementById("search-results");
+            resultBox.innerHTML = '<div class="loading">正在检索...</div>';
+
+            fetch(`${API_BASE}/search?keyword=${encodeURIComponent(kw)}&search_type=${type}`)
+                .then(r => r.json())
+                .then(res => {
+                    const data = res.data;
+                    let html = "";
+
+                    if (data.questions && data.questions.length) {
+                        html += `
+                            <div class="result-section">
+                                <div class="result-section-title">问题匹配 (${data.questions.length} 条)</div>
+                                ${data.questions.map(item => `
+                                    <div class="result-item">
+                                        <div class="result-title">${item.question}</div>
+                                        <div class="result-meta">
+                                            <span>答案：${item.answer}</span>
+                                            <span class="meta-tag">${item.type}</span>
+                                            <span class="meta-tag">${item.level}</span>
+                                        </div>
+                                    </div>
+                                `).join("")}
+                            </div>
+                        `;
+                    }
+
+                    if (data.documents && data.documents.length) {
+                        html += `
+                            <div class="result-section">
+                                <div class="result-section-title">文档匹配 (${data.documents.length} 条)</div>
+                                ${data.documents.map(item => `
+                                    <div class="result-item">
+                                        <div class="result-title">${item.title}</div>
+                                        <div class="result-meta">
+                                            <span>${item.preview || ""}</span>
+                                        </div>
+                                    </div>
+                                `).join("")}
+                            </div>
+                        `;
+                    }
+
+                    if (data.entities && data.entities.length) {
+                        html += `
+                            <div class="result-section">
+                                <div class="result-section-title">实体匹配 (${data.entities.length} 条)</div>
+                                ${data.entities.map(item => `
+                                    <div class="result-item">
+                                        <div class="result-title">${item.name}</div>
+                                        <div class="result-meta">
+                                            <span>${item.description || ""}</span>
+                                        </div>
+                                    </div>
+                                `).join("")}
+                            </div>
+                        `;
+                    }
+
+                    if (!html) {
+                        html = '<div class="empty">未找到匹配结果</div>';
+                    }
+
+                    resultBox.innerHTML = html;
+                })
+                .catch(err => {
+                    console.error("检索异常:", err);
+                    resultBox.innerHTML = '<div class="empty">检索失败，请检查后端服务</div>';
+                });
+        }
+
+        // ========== 聚类统计 ==========
+        let clusterLoaded = false;
+        function loadClusterData() {
+            if (clusterLoaded) return;
+            
+            fetch(`${API_BASE}/cluster`)
+                .then(r => r.json())
+                .then(res => {
+                    const data = res.data;
+                    
+                    // 填充统计卡片
+                    document.getElementById("num-questions").textContent = data.total_questions.toLocaleString();
+                    document.getElementById("num-docs").textContent = data.total_documents.toLocaleString();
+                    document.getElementById("num-entities").textContent = data.total_entities.toLocaleString();
+                    document.getElementById("num-relations").textContent = data.total_relations.toLocaleString();
+
+                    // 问题类型饼图
+                    echarts.init(document.getElementById("chart-type")).setOption({
+                        tooltip: { trigger: 'item' },
+                        color: ['#2563eb', '#10b981'],
+                        series: [{
+                            type: 'pie',
+                            radius: ['40%', '70%'],
+                            avoidLabelOverlap: false,
+                            itemStyle: {
+                                borderRadius: 8,
+                                borderColor: '#fff',
+                                borderWidth: 2
+                            },
+                            label: { show: true, formatter: '{b}: {c}' },
+                            data: data.type_distribution.map(d => ({name: d.type, value: d.count}))
+                        }]
+                    });
+
+                    // 难度分布饼图
+                    echarts.init(document.getElementById("chart-level")).setOption({
+                        tooltip: { trigger: 'item' },
+                        color: ['#22c55e', '#f59e0b', '#ef4444'],
+                        series: [{
+                            type: 'pie',
+                            radius: ['40%', '70%'],
+                            itemStyle: {
+                                borderRadius: 8,
+                                borderColor: '#fff',
+                                borderWidth: 2
+                            },
+                            label: { show: true, formatter: '{b}: {c}' },
+                            data: data.level_distribution.map(d => ({name: d.level, value: d.count}))
+                        }]
+                    });
+
+                    // 关系类型柱状图
+                    echarts.init(document.getElementById("chart-rel")).setOption({
+                        tooltip: { trigger: 'axis' },
+                        grid: { left: 40, right: 20, top: 20, bottom: 40 },
+                        xAxis: { 
+                            type: 'category', 
+                            data: data.relation_distribution.map(d => d.type),
+                            axisLabel: { fontSize: 11 }
+                        },
+                        yAxis: { type: 'value' },
+                        series: [{
+                            type: 'bar',
+                            data: data.relation_distribution.map(d => d.count),
+                            itemStyle: {
+                                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                    { offset: 0, color: '#60a5fa' },
+                                    { offset: 1, color: '#2563eb' }
+                                ]),
+                                borderRadius: [4, 4, 0, 0]
+                            },
+                            barWidth: '50%'
+                        }]
+                    });
+
+                    clusterLoaded = true;
+                })
+                .catch(err => {
+                    console.error("聚类数据加载失败:", err);
+                });
+        }
+
+        // ========== 窗口缩放自适应 ==========
+        window.addEventListener("resize", () => {
+            if (graphChart) {
+                graphChart.resize();
+            }
+        });
+
+        // 页面完全加载后再初始化，确保DOM就绪
+        window.onload = () => {
+            initGraph();
+            // 默认示例查询
+            document.getElementById("entity-input").value = "Oberoi family";
+            doMultiHop();
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+# 虚拟环境
+venv/
+*.env
+
+# Python缓存
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+
+# 日志文件
+*.log
+nohup.out
+
+# 编辑器临时文件
+*.swp
+.DS_Store
+.vscode/
+
+# 评估临时报告
+evaluation_full_report.txt
+evaluation_result.txt
+
+# 超大数据集，完全不上传
+data/processed/*.jsonl
+data/raw/
