@@ -11,6 +11,7 @@
 
 ## 项目目录结构
 
+``` plaintext
 hotpot-qa-experiment/
 ├── data/
 │   ├── raw/          # 原始数据集：train.jsonl、dev.jsonl
@@ -24,6 +25,7 @@ hotpot-qa-experiment/
 ├── frontend/
 │   └── index.html    # 前端单页可视化应用
 └── README.md         # 项目说明文档
+```
 
 ## 部署与运行
 > 运行环境：Ubuntu / Linux 系统，需提前安装 ArangoDB、Redis、Python3
