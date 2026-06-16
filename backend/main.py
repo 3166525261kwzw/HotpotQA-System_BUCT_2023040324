@@ -220,4 +220,4 @@ def cluster_stats():
     }
 
     set_cache(cache_key, stats)
-    return {"code": 0, "data": stats, "from_cache": False}
+return {"code": 0, "data": stats, "from_cache": False}
