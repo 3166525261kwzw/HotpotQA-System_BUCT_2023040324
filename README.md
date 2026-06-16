@@ -28,7 +28,7 @@ hotpot-qa-experiment/
 ```
 
 ## 部署与运行
-> 运行环境：Ubuntu / Linux 系统，需提前安装 ArangoDB、Redis、Python3
+> 运行环境：Ubuntu 系统，需提前安装 ArangoDB、Redis、Python3
 
 ### 1. 环境准备
 ```bash
