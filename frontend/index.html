@@ -96,7 +96,6 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* 通用卡片 */
         .card {
             background: white;
             border-radius: 12px;
@@ -501,7 +500,6 @@
     </div>
 
     <script>
-        // 后端API地址
         const API_BASE = "http://" + window.location.hostname + ":8000/api";
         let graphChart = null;
 
@@ -524,13 +522,14 @@
             });
         });
 
-        // ========== 安全初始化图谱 ==========
+        // ========== 安全初始化图谱：确保DOM存在再初始化 ==========
         function initGraph() {
             const dom = document.getElementById("graph-container");
             if (!dom) {
                 console.error("图谱容器DOM不存在");
                 return;
             }
+            // 销毁旧实例，防止重复初始化
             if (graphChart) {
                 graphChart.dispose();
                 graphChart = null;
@@ -850,7 +849,7 @@
 
         window.onload = () => {
             initGraph();
-    
+            // 默认示例查询
             document.getElementById("entity-input").value = "Oberoi family";
             doMultiHop();
         };
